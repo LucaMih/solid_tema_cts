@@ -1,5 +1,6 @@
 package ro.ase.acs.sql;
 
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -7,44 +8,40 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public class Main {
+interface DatabaseManager {
+	void createTable() throws SQLException;
+	void insertData() throws SQLException;
+	void readData() throws SQLException;
+}
 
-	public static void main(String[] args) {
-		try {
-			Class.forName("org.sqlite.JDBC");
-			Connection connection = DriverManager.getConnection("jdbc:sqlite:database.db");
-			connection.setAutoCommit(false);
-			
-			createTable(connection);
-			insertData(connection);
-			readData(connection);
-			
-			connection.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+class SQLiteManager implements DatabaseManager {
+	private Connection connection;
+
+	public SQLiteManager(String databaseUrl) throws SQLException {
+		connection = DriverManager.getConnection(databaseUrl);
+		connection.setAutoCommit(false);
 	}
 
-	private static void createTable(Connection connection) throws SQLException {
+	public void createTable() throws SQLException {
 		String sqlDrop = "DROP TABLE IF EXISTS employees";
 		String sqlCreate = "CREATE TABLE employees(id INTEGER PRIMARY KEY,"
 				+ "name TEXT, address TEXT, salary REAL)";
-		
+
 		Statement statement = connection.createStatement();
 		statement.executeUpdate(sqlDrop);
 		statement.executeUpdate(sqlCreate);
 		statement.close();
 		connection.commit();
 	}
-	
-	private static void insertData(Connection connection) throws SQLException {
+
+	public void insertData() throws SQLException {
 		String sqlInsert = "INSERT INTO employees VALUES(1, 'Popescu Ion', 'Bucharest', 4000)";
 		Statement statement = connection.createStatement();
 		statement.executeUpdate(sqlInsert);
 		statement.close();
-		
+
 		String sqlInsertWithParams = "INSERT INTO employees VALUES (?,?,?,?)";
-		PreparedStatement preparedStatement = 
+		PreparedStatement preparedStatement =
 				connection.prepareStatement(sqlInsertWithParams);
 		preparedStatement.setInt(1, 2);
 		preparedStatement.setString(2, "Ionescu Vasile");
@@ -52,11 +49,11 @@ public class Main {
 		preparedStatement.setDouble(4, 4500);
 		preparedStatement.executeUpdate();
 		preparedStatement.close();
-		
+
 		connection.commit();
 	}
-	
-	private static void readData(Connection connection) throws SQLException {
+
+	public void readData() throws SQLException {
 		String sqlSelect = "SELECT * FROM employees";
 		Statement statement = connection.createStatement();
 		ResultSet rs = statement.executeQuery(sqlSelect);
@@ -72,5 +69,19 @@ public class Main {
 		}
 		rs.close();
 		statement.close();
+	}
+}
+
+public class Main {
+	public static void main(String[] args) {
+		try {
+			String databaseUrl = "jdbc:sqlite:database.db";
+			DatabaseManager databaseManager = new SQLiteManager(databaseUrl);
+			databaseManager.createTable();
+			databaseManager.insertData();
+			databaseManager.readData();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }
